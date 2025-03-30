@@ -8,9 +8,13 @@ on:
     - cron: "0 0 * * 1"
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}
+
 jobs:
 
   build-test-publish:
+    if: ${{ github.event_name != 'schedule' || github.repository == 'FirebirdSQL/firebird-docker' }}
     runs-on: ubuntu-latest
 
     steps:
