@@ -198,7 +198,6 @@ To use this image with [Firebird Events](https://firebirdsql.org/file/documentat
 - [Publish](https://docs.docker.com/get-started/docker-concepts/running-containers/publishing-ports/) this port to the host.
 
 More information:
-
 - [This answer](https://stackoverflow.com/a/49918178/33244) from Mark Rotteveel at Stack Overflow.
 - [The Power of Firebird Events](https://www.firebirdsql.org/file/documentation/papers_presentations/Power_Firebird_events.pdf) from Milan Babuškov.
 
@@ -210,7 +209,7 @@ When creating a new database with `FIREBIRD_DATABASE` environment variable you c
 
 Any file with extensions `.sh`, `.sql`, `.sql.gz`, `.sql.xz` and `.sql.zst` found in `/docker-entrypoint-initdb.d/` will be executed in _alphabetical_ order. `.sh` files without file execute permission (`+x`) will be _sourced_ rather than executed.
 
-**IMPORTANT:** Scripts will only run if you start the container with a data directory that is empty. Any pre-existing database will be left untouched on container startup.
+> **IMPORTANT:** Scripts will only run if you start the container with a data directory that is empty. Any pre-existing database will be left untouched on container startup.
 
 
 
@@ -230,6 +229,68 @@ Alternatively, you can use the same time zone as your host system by mapping the
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
 ```
+
+
+
+## Backup and Restore
+
+### For online databases
+
+If the database is in use, call `gbak` inside the running container using Firebird Service Manager (`-se` switch) for best performance.
+
+The following commands will backup and restore a database **in the data directory** (`/var/lib/firebird/data`) of the running container.
+
+```bash
+# Online backup
+FIREBIRD_CONTAINER=MY_CONTAINER_NAME_OR_ID
+DATABASE_FILE=MY_DATABASE.fdb
+BACKUP_FILE=MY_DATABASE.fbk
+
+docker exec $FIREBIRD_CONTAINER bash -c "gbak -b -user SYSDBA -pas \$FIREBIRD_ROOT_PASSWORD -se localhost:service_mgr \$FIREBIRD_DATA/$DATABASE_FILE \$FIREBIRD_DATA/$BACKUP_FILE"
+```
+
+```bash
+# Online restore
+FIREBIRD_CONTAINER=MY_CONTAINER_NAME_OR_ID
+BACKUP_FILE=MY_DATABASE.fbk
+DATABASE_FILE=MY_DATABASE.fdb
+
+docker exec $FIREBIRD_CONTAINER bash -c "gbak -c -user SYSDBA -pas \$FIREBIRD_ROOT_PASSWORD -se localhost:service_mgr \$FIREBIRD_DATA/$BACKUP_FILE \$FIREBIRD_DATA/$DATABASE_FILE"
+```
+
+
+
+### For offline databases
+
+> **IMPORTANT:** Never use this with online (running) database files.
+
+If you don't have a running server, create an ephemeral container to run `gbak` directly over the database files.
+
+The following commands will backup and restore a database **in the current directory** (`$PWD`).
+
+```bash
+# Offline backup
+FIREBIRD_IMAGE=firebirdsql/firebird
+DATABASE_FILE=MY_DATABASE.fdb
+BACKUP_FILE=MY_DATABASE.fbk
+
+docker run --rm -v .:/pwd $FIREBIRD_IMAGE gbak -b /pwd/$DATABASE_FILE /pwd/$BACKUP_FILE 
+```
+
+```bash
+# Offline restore
+FIREBIRD_IMAGE=firebirdsql/firebird
+BACKUP_FILE=MY_DATABASE.fbk
+DATABASE_FILE=MY_DATABASE.fdb
+
+docker run --rm -v .:/pwd $FIREBIRD_IMAGE gbak -c /pwd/$BACKUP_FILE /pwd/$DATABASE_FILE
+```
+
+More information:
+- [Firebird’s gbak Backup and Restore Utility](https://firebirdsql.org/file/documentation/html/en/firebirddocs/gbak/firebird-gbak.html) from Norman Dunbar and Mark Rotteveel.
+- [Quick Guide for Gbak Backup-Restore](https://ib-aid.com/articles/firebird-gbak-backup-tips-and-tricks) from IBSurgeon.
+
+
 
 # Development notes
 
@@ -264,4 +325,3 @@ To run the test suite for each image, use:
 ```bash
 Invoke-Build Test
 ```
-
