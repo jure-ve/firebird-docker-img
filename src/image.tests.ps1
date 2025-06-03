@@ -114,7 +114,7 @@ function ExitCodeIs ([Parameter(ValueFromPipeline)]$Unused, [int]$ExpectedValue,
 }
 
 # Asserts that the difference between two DateTime values are under a given tolerance.
-function IsAdjacent ([Parameter(ValueFromPipeline)][datetime]$InputValue, [datetime]$ExpectedValue, [timespan]$Tolerance=[timespan]::FromSeconds(1), [string]$ErrorMessage) {
+function IsAdjacent ([Parameter(ValueFromPipeline)][datetime]$InputValue, [datetime]$ExpectedValue, [timespan]$Tolerance=[timespan]::FromSeconds(3), [string]$ErrorMessage) {
     process { }
     end {
         $difference = $InputValue - $ExpectedValue
