@@ -393,3 +393,29 @@ Invoke-Build Prepare
 Invoke-Build Clean
 ```
 
+
+
+## Following a new Firebird release
+
+Once a new Firebird release is published, follow these steps to update all relevant files in this repository:
+
+```bash
+# Update assets.json from GitHub releases
+Invoke-Build Update-Assets
+
+# Update README.md from assets.json
+Invoke-Build Update-Readme
+
+# Regenerate source files
+Invoke-Build Prepare
+
+# Adds all untracked files
+git add -u
+
+# Remove logs from staging area
+git reset -- generated/logs/
+
+# Commit
+git commit -M "Adds Firebird ..."
+```
+
