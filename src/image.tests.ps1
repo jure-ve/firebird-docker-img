@@ -28,7 +28,6 @@ function Use-Container([string[]]$Parameters, [Parameter(Mandatory)][ScriptBlock
     $cId = docker $allParameters
     try {
         Write-Verbose "  container id = $cId"
-        Start-Sleep -Seconds 0.5
         Wait-Port -ContainerName $cId -Port 3050
 
         # Last check before execute
@@ -51,8 +50,14 @@ function Use-Container([string[]]$Parameters, [Parameter(Mandatory)][ScriptBlock
 }
 
 # Wait for a port to be open in a container.
-function Wait-Port([string]$ContainerName, [int]$Port) {
-    while (-not (Test-Port -ContainerName $cId -Port 3050)) {
+function Wait-Port([string]$ContainerName, [int]$Port, [int]$TimeoutSeconds = 60) {
+    $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    while (-not (Test-Port -ContainerName $ContainerName -Port $Port)) {
+        if ($stopwatch.Elapsed.TotalSeconds -gt $TimeoutSeconds) {
+            Write-Warning "Port $Port not open in container after $TimeoutSeconds seconds. Output log is:"
+            docker logs $ContainerName
+            throw "Timeout waiting for port $Port in container '$ContainerName'."
+        }
         Start-Sleep -Seconds 0.2
     }
 }
@@ -215,12 +220,12 @@ task FIREBIRD_DATABASE_can_create_database_with_unicode_characters {
 }
 
 task FIREBIRD_DATABASE_PAGE_SIZE_can_set_page_size_on_database_creation {
-    Use-Container -Parameters '-e', 'FIREBIRD_DATABASE=test.fdb', '-e', 'FIREBIRD_DATABASE_PAGE_SIZE=4096' {
+    Use-Container -Parameters '-e', 'FIREBIRD_DATABASE=test.fdb', '-e', 'FIREBIRD_DATABASE_PAGE_SIZE=8192' {
         param($cId)
 
         'SET LIST ON; SELECT mon$page_size FROM mon$database;' |
             docker exec -i $cId isql -b -q /var/lib/firebird/data/test.fdb |
-                Contains -Pattern 'MON\$PAGE_SIZE(\s+)4096' -ErrorMessage "Expected database page size to be 4096."
+                Contains -Pattern 'MON\$PAGE_SIZE(\s+)8192' -ErrorMessage "Expected database page size to be 8192."
     }
 
     Use-Container -Parameters '-e', 'FIREBIRD_DATABASE=test.fdb', '-e', 'FIREBIRD_DATABASE_PAGE_SIZE=16384' {
@@ -320,12 +325,14 @@ task FIREBIRD_USE_LEGACY_AUTH_enables_legacy_auth {
 }
 
 task FIREBIRD_CONF_can_change_any_setting {
-    Use-Container -Parameters '-e', 'FIREBIRD_CONF_DefaultDbCachePages=64K', '-e', 'FIREBIRD_CONF_DefaultDbCachePages=64K', '-e', 'FIREBIRD_CONF_FileSystemCacheThreshold=100M' {
+    # DefaultDbCachePages and TempCacheLimit exist in all supported Firebird versions (3, 4, 5, 6).
+    # FileSystemCacheThreshold was removed in Firebird 6 so we intentionally avoid it.
+    Use-Container -Parameters '-e', 'FIREBIRD_CONF_DefaultDbCachePages=64K', '-e', 'FIREBIRD_CONF_TempCacheLimit=100M' {
         param($cId)
 
         $logs = docker logs $cId
         $logs | Contains -Pattern "DefaultDbCachePages = 64K" -ErrorMessage "Expected log message 'DefaultDbCachePages = 64K'."
-        $logs | Contains -Pattern "FileSystemCacheThreshold = 100M" -ErrorMessage "Expected log message 'FileSystemCacheThreshold = 100M'."
+        $logs | Contains -Pattern "TempCacheLimit = 100M" -ErrorMessage "Expected log message 'TempCacheLimit = 100M'."
     }
 }
 
@@ -418,4 +425,173 @@ task TZ_can_change_system_timezone {
 
         $actual | IsAdjacent -ExpectedValue $expected
     }
+}
+
+task FIREBIRD_ROOT_PASSWORD_with_special_characters {
+    # Test SQL injection resistance: passwords with single quotes, semicolons, etc.
+    Use-Container -Parameters '-e', 'FIREBIRD_DATABASE=test.fdb', '-e', "FIREBIRD_ROOT_PASSWORD=it's;a--test" {
+        param($cId)
+
+        # Correct password
+        'SELECT 1 FROM rdb$database;' |
+            docker exec -i $cId isql -b -q -u SYSDBA -p "it's;a--test" inet:///var/lib/firebird/data/test.fdb |
+                ExitCodeIs -ExpectedValue 0 -ErrorMessage "Expected successful login with special character SYSDBA password."
+
+        docker logs $cId |
+            Contains -Pattern 'Changing SYSDBA password' -ErrorMessage "Expected log message for SYSDBA password change with special characters."
+    }
+}
+
+task FIREBIRD_USER_PASSWORD_with_special_characters {
+    # Test that user passwords with quotes work (SQL injection vector)
+    Use-Container -Parameters '-e', 'FIREBIRD_DATABASE=test.fdb', '-e', "FIREBIRD_USER=alice", '-e', "FIREBIRD_PASSWORD=p@ss'word" {
+        param($cId)
+
+        'SELECT 1 FROM rdb$database;' |
+            docker exec -i $cId isql -b -q -u alice -p "p@ss'word" inet:///var/lib/firebird/data/test.fdb |
+                ExitCodeIs -ExpectedValue 0 -ErrorMessage "Expected successful login with special character user password."
+
+        docker logs $cId |
+            Contains -Pattern "Creating user 'alice'" -ErrorMessage "Expected log message indicating creation of user 'alice' with special password."
+    }
+}
+
+task FIREBIRD_USER_with_dot_creates_delimited_user {
+    # Issue #44: usernames that are not regular SQL identifiers (e.g. containing dots)
+    # must be created as delimited (double-quoted) identifiers.
+    $initDbFolder = New-TemporaryDirectory
+    try {
+        @'
+        CREATE TABLE init_check (id INTEGER NOT NULL PRIMARY KEY);
+'@ | Out-File "$initDbFolder/10-init.sql"
+
+        Use-Container -Parameters '-e', 'FIREBIRD_DATABASE=test.fdb', '-e', 'FIREBIRD_USER=dba.backend', '-e', 'FIREBIRD_PASSWORD=bird', '-v', "$($initDbFolder):/docker-entrypoint-initdb.d/" {
+            param($cId)
+
+            # Login as the delimited user: the name must be passed quoted.
+            #   (pwsh >= 7.3 passes the embedded double quotes verbatim to native commands)
+            'SELECT 1 FROM rdb$database;' |
+                docker exec -i $cId isql -b -q -u '"dba.backend"' -p bird inet:///var/lib/firebird/data/test.fdb |
+                    ExitCodeIs -ExpectedValue 0 -ErrorMessage "Expected successful login as delimited user ""dba.backend""."
+
+            # Init script must have been executed (process_sql logs in as the delimited user)
+            'SELECT 1 FROM init_check;' |
+                docker exec -i $cId isql -b -q /var/lib/firebird/data/test.fdb |
+                    ExitCodeIs -ExpectedValue 0 -ErrorMessage "Expected init script to have created table 'init_check'."
+
+            docker logs $cId |
+                Contains -Pattern "Creating user 'dba\.backend'" -ErrorMessage "Expected log message indicating creation of user 'dba.backend'."
+        }
+    }
+    finally {
+        Remove-Item $initDbFolder -Force -Recurse
+    }
+}
+
+task FIREBIRD_USER_already_quoted_is_used_verbatim {
+    # Backward compatibility with the pre-existing workaround for issue #44: FIREBIRD_USER='"name.with.dots"'
+    # The user is created verbatim (case-sensitive), so the login name must be passed quoted.
+    #   (pwsh >= 7.3 passes the embedded double quotes verbatim to native commands)
+    Use-Container -Parameters '-e', 'FIREBIRD_DATABASE=test.fdb', '-e', 'FIREBIRD_USER="dba.backend"', '-e', 'FIREBIRD_PASSWORD=bird' {
+        param($cId)
+
+        'SELECT 1 FROM rdb$database;' |
+            docker exec -i $cId isql -b -q -u '"dba.backend"' -p bird inet:///var/lib/firebird/data/test.fdb |
+                ExitCodeIs -ExpectedValue 0 -ErrorMessage "Expected pre-quoted FIREBIRD_USER to keep working."
+    }
+}
+
+task Graceful_shutdown_via_SIGTERM {
+    Use-Container -ScriptBlock {
+        param($cId)
+
+        # Send SIGTERM (same as docker stop)
+        docker kill --signal SIGTERM $cId > $null
+        Start-Sleep -Seconds 3
+
+        # Container should have exited cleanly
+        $state = docker inspect --format '{{.State.Status}}' $cId 2>$null
+        if ($state -eq 'running') {
+            # Give it a bit more time
+            Start-Sleep -Seconds 3
+        }
+
+        $logs = docker logs $cId
+        $logs | Contains -Pattern 'Stopping Firebird' -ErrorMessage "Expected 'Stopping Firebird' log on SIGTERM."
+    }
+}
+
+task Tini_is_PID_1 {
+    Use-Container -ScriptBlock {
+        param($cId)
+
+        $pid1 = docker exec $cId cat /proc/1/comm
+        assert ($pid1.Trim() -eq 'tini') "Expected PID 1 to be 'tini', got '$($pid1.Trim())'."
+    }
+}
+
+task FIREBIRD_ROOT_PASSWORD_FILE_can_set_password_from_file {
+    $secretDir = New-TemporaryDirectory
+    try {
+        'secretpass123' | Out-File "$secretDir/password.txt" -NoNewline
+
+        Use-Container -Parameters '-e', 'FIREBIRD_DATABASE=test.fdb', '-e', 'FIREBIRD_ROOT_PASSWORD_FILE=/run/secrets/password.txt', '-v', "$($secretDir):/run/secrets/" {
+            param($cId)
+
+            # Correct password from file
+            'SELECT 1 FROM rdb$database;' |
+                docker exec -i $cId isql -b -q -u SYSDBA -p secretpass123 inet:///var/lib/firebird/data/test.fdb |
+                    ExitCodeIs -ExpectedValue 0 -ErrorMessage "Expected successful login with password loaded from _FILE."
+
+            docker logs $cId |
+                Contains -Pattern 'Changing SYSDBA password' -ErrorMessage "Expected SYSDBA password change log when using _FILE."
+        }
+    }
+    finally {
+        Remove-Item $secretDir -Force -Recurse
+    }
+}
+
+task FIREBIRD_PASSWORD_FILE_can_set_user_password_from_file {
+    $secretDir = New-TemporaryDirectory
+    try {
+        'userpass456' | Out-File "$secretDir/user_password.txt" -NoNewline
+
+        Use-Container -Parameters '-e', 'FIREBIRD_DATABASE=test.fdb', '-e', 'FIREBIRD_USER=bob', '-e', 'FIREBIRD_PASSWORD_FILE=/run/secrets/user_password.txt', '-v', "$($secretDir):/run/secrets/" {
+            param($cId)
+
+            'SELECT 1 FROM rdb$database;' |
+                docker exec -i $cId isql -b -q -u bob -p userpass456 inet:///var/lib/firebird/data/test.fdb |
+                    ExitCodeIs -ExpectedValue 0 -ErrorMessage "Expected successful login with user password loaded from _FILE."
+
+            docker logs $cId |
+                Contains -Pattern "Creating user 'bob'" -ErrorMessage "Expected log for user creation with _FILE password."
+        }
+    }
+    finally {
+        Remove-Item $secretDir -Force -Recurse
+    }
+}
+
+task FILE_and_env_var_are_mutually_exclusive {
+    $secretDir = New-TemporaryDirectory
+    try {
+        'filepass' | Out-File "$secretDir/password.txt" -NoNewline
+
+        # Setting both FIREBIRD_ROOT_PASSWORD and FIREBIRD_ROOT_PASSWORD_FILE should fail
+        $($stdout = Invoke-Container -DockerParameters '-e', 'FIREBIRD_ROOT_PASSWORD=envpass', '-e', 'FIREBIRD_ROOT_PASSWORD_FILE=/run/secrets/password.txt', '-v', "$($secretDir):/run/secrets/") 2>&1 |
+            Contains -Pattern 'Both FIREBIRD_ROOT_PASSWORD and FIREBIRD_ROOT_PASSWORD_FILE are set' -ErrorMessage "Expected error when both _FILE and env var are set."
+    }
+    finally {
+        Remove-Item $secretDir -Force -Recurse
+    }
+}
+
+task Tag_correctness_via_docker_inspect {
+    # Verify the image has the correct version label
+    $labels = docker inspect --format '{{json .Config.Labels}}' $env:FULL_IMAGE_NAME | ConvertFrom-Json
+    $version = $labels.'org.opencontainers.image.version'
+    assert ($null -ne $version) "Expected 'org.opencontainers.image.version' label to be set."
+    # Accept either a semver release (e.g. '5.0.3') or a snapshot tag (e.g. '5-snapshot', '6-snapshot')
+    assert ($version -match '^\d+\.\d+\.\d+$' -or $version -match '^\d+-snapshot$') "Expected version label '$version' to be semver or snapshot format."
 }

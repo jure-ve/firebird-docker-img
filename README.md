@@ -19,71 +19,127 @@ Docker images for Firebird Database.
 
 |`firebirdsql/firebird`|Dockerfile|
 |:-|:-:|
-|`5`, `5.0.3`, `latest`|[Dockerfile](./generated/5.0.3/bookworm/Dockerfile)|
- |`bullseye`, `5-bullseye`, `5.0.3-bullseye`|[Dockerfile](./generated/5.0.3/bullseye/Dockerfile)|
- |`jammy`, `5-jammy`, `5.0.3-jammy`|[Dockerfile](./generated/5.0.3/jammy/Dockerfile)|
- |`noble`, `5-noble`, `5.0.3-noble`|[Dockerfile](./generated/5.0.3/noble/Dockerfile)|
- |`5.0.2`|[Dockerfile](./generated/5.0.2/bookworm/Dockerfile)|
- |`5.0.2-bullseye`|[Dockerfile](./generated/5.0.2/bullseye/Dockerfile)|
- |`5.0.2-jammy`|[Dockerfile](./generated/5.0.2/jammy/Dockerfile)|
- |`5.0.2-noble`|[Dockerfile](./generated/5.0.2/noble/Dockerfile)|
- |`5.0.1`|[Dockerfile](./generated/5.0.1/bookworm/Dockerfile)|
- |`5.0.1-bullseye`|[Dockerfile](./generated/5.0.1/bullseye/Dockerfile)|
- |`5.0.1-jammy`|[Dockerfile](./generated/5.0.1/jammy/Dockerfile)|
- |`5.0.1-noble`|[Dockerfile](./generated/5.0.1/noble/Dockerfile)|
- |`5.0.0`|[Dockerfile](./generated/5.0.0/bookworm/Dockerfile)|
- |`5.0.0-bullseye`|[Dockerfile](./generated/5.0.0/bullseye/Dockerfile)|
- |`5.0.0-jammy`|[Dockerfile](./generated/5.0.0/jammy/Dockerfile)|
- |`5.0.0-noble`|[Dockerfile](./generated/5.0.0/noble/Dockerfile)|
- |`4`, `4.0.6`|[Dockerfile](./generated/4.0.6/bookworm/Dockerfile)|
- |`4-bullseye`, `4.0.6-bullseye`|[Dockerfile](./generated/4.0.6/bullseye/Dockerfile)|
- |`4-jammy`, `4.0.6-jammy`|[Dockerfile](./generated/4.0.6/jammy/Dockerfile)|
- |`4-noble`, `4.0.6-noble`|[Dockerfile](./generated/4.0.6/noble/Dockerfile)|
- |`4.0.5`|[Dockerfile](./generated/4.0.5/bookworm/Dockerfile)|
- |`4.0.5-bullseye`|[Dockerfile](./generated/4.0.5/bullseye/Dockerfile)|
- |`4.0.5-jammy`|[Dockerfile](./generated/4.0.5/jammy/Dockerfile)|
- |`4.0.5-noble`|[Dockerfile](./generated/4.0.5/noble/Dockerfile)|
- |`4.0.4`|[Dockerfile](./generated/4.0.4/bookworm/Dockerfile)|
- |`4.0.4-bullseye`|[Dockerfile](./generated/4.0.4/bullseye/Dockerfile)|
- |`4.0.4-jammy`|[Dockerfile](./generated/4.0.4/jammy/Dockerfile)|
- |`4.0.4-noble`|[Dockerfile](./generated/4.0.4/noble/Dockerfile)|
- |`4.0.3`|[Dockerfile](./generated/4.0.3/bookworm/Dockerfile)|
- |`4.0.3-bullseye`|[Dockerfile](./generated/4.0.3/bullseye/Dockerfile)|
- |`4.0.3-jammy`|[Dockerfile](./generated/4.0.3/jammy/Dockerfile)|
- |`4.0.3-noble`|[Dockerfile](./generated/4.0.3/noble/Dockerfile)|
- |`4.0.2`|[Dockerfile](./generated/4.0.2/bookworm/Dockerfile)|
- |`4.0.2-bullseye`|[Dockerfile](./generated/4.0.2/bullseye/Dockerfile)|
- |`4.0.2-jammy`|[Dockerfile](./generated/4.0.2/jammy/Dockerfile)|
- |`4.0.2-noble`|[Dockerfile](./generated/4.0.2/noble/Dockerfile)|
- |`4.0.1`|[Dockerfile](./generated/4.0.1/bookworm/Dockerfile)|
- |`4.0.1-bullseye`|[Dockerfile](./generated/4.0.1/bullseye/Dockerfile)|
- |`4.0.1-jammy`|[Dockerfile](./generated/4.0.1/jammy/Dockerfile)|
- |`4.0.1-noble`|[Dockerfile](./generated/4.0.1/noble/Dockerfile)|
- |`4.0.0`|[Dockerfile](./generated/4.0.0/bookworm/Dockerfile)|
- |`4.0.0-bullseye`|[Dockerfile](./generated/4.0.0/bullseye/Dockerfile)|
- |`4.0.0-jammy`|[Dockerfile](./generated/4.0.0/jammy/Dockerfile)|
- |`4.0.0-noble`|[Dockerfile](./generated/4.0.0/noble/Dockerfile)|
- |`3`, `3.0.13`|[Dockerfile](./generated/3.0.13/bookworm/Dockerfile)|
- |`3-bullseye`, `3.0.13-bullseye`|[Dockerfile](./generated/3.0.13/bullseye/Dockerfile)|
- |`3-jammy`, `3.0.13-jammy`|[Dockerfile](./generated/3.0.13/jammy/Dockerfile)|
- |`3.0.12`|[Dockerfile](./generated/3.0.12/bookworm/Dockerfile)|
- |`3.0.12-bullseye`|[Dockerfile](./generated/3.0.12/bullseye/Dockerfile)|
- |`3.0.12-jammy`|[Dockerfile](./generated/3.0.12/jammy/Dockerfile)|
- |`3.0.11`|[Dockerfile](./generated/3.0.11/bookworm/Dockerfile)|
- |`3.0.11-bullseye`|[Dockerfile](./generated/3.0.11/bullseye/Dockerfile)|
- |`3.0.11-jammy`|[Dockerfile](./generated/3.0.11/jammy/Dockerfile)|
- |`3.0.10`|[Dockerfile](./generated/3.0.10/bookworm/Dockerfile)|
- |`3.0.10-bullseye`|[Dockerfile](./generated/3.0.10/bullseye/Dockerfile)|
- |`3.0.10-jammy`|[Dockerfile](./generated/3.0.10/jammy/Dockerfile)|
- |`3.0.9`|[Dockerfile](./generated/3.0.9/bookworm/Dockerfile)|
- |`3.0.9-bullseye`|[Dockerfile](./generated/3.0.9/bullseye/Dockerfile)|
- |`3.0.9-jammy`|[Dockerfile](./generated/3.0.9/jammy/Dockerfile)|
- |`3.0.8`|[Dockerfile](./generated/3.0.8/bookworm/Dockerfile)|
- |`3.0.8-bullseye`|[Dockerfile](./generated/3.0.8/bullseye/Dockerfile)|
- |`3.0.8-jammy`|[Dockerfile](./generated/3.0.8/jammy/Dockerfile)|
+|`5.0.4-bookworm`, `5-bookworm`, `bookworm`|[Dockerfile](./generated/5.0.4/bookworm/Dockerfile)|
+|`5.0.4-bullseye`, `5-bullseye`, `bullseye`|[Dockerfile](./generated/5.0.4/bullseye/Dockerfile)|
+|`5.0.4-jammy`, `5-jammy`, `jammy`|[Dockerfile](./generated/5.0.4/jammy/Dockerfile)|
+|`5.0.4-noble`, `5-noble`, `noble`|[Dockerfile](./generated/5.0.4/noble/Dockerfile)|
+|`5.0.4-trixie`, `5-trixie`, `trixie`, `5.0.4`, `5`, `latest`|[Dockerfile](./generated/5.0.4/trixie/Dockerfile)|
+|`5.0.3-bookworm`|[Dockerfile](./generated/5.0.3/bookworm/Dockerfile)|
+|`5.0.3-bullseye`|[Dockerfile](./generated/5.0.3/bullseye/Dockerfile)|
+|`5.0.3-jammy`|[Dockerfile](./generated/5.0.3/jammy/Dockerfile)|
+|`5.0.3-noble`|[Dockerfile](./generated/5.0.3/noble/Dockerfile)|
+|`5.0.3-trixie`, `5.0.3`|[Dockerfile](./generated/5.0.3/trixie/Dockerfile)|
+|`5.0.2-bookworm`|[Dockerfile](./generated/5.0.2/bookworm/Dockerfile)|
+|`5.0.2-bullseye`|[Dockerfile](./generated/5.0.2/bullseye/Dockerfile)|
+|`5.0.2-jammy`|[Dockerfile](./generated/5.0.2/jammy/Dockerfile)|
+|`5.0.2-noble`|[Dockerfile](./generated/5.0.2/noble/Dockerfile)|
+|`5.0.2-trixie`, `5.0.2`|[Dockerfile](./generated/5.0.2/trixie/Dockerfile)|
+|`5.0.1-bookworm`|[Dockerfile](./generated/5.0.1/bookworm/Dockerfile)|
+|`5.0.1-bullseye`|[Dockerfile](./generated/5.0.1/bullseye/Dockerfile)|
+|`5.0.1-jammy`|[Dockerfile](./generated/5.0.1/jammy/Dockerfile)|
+|`5.0.1-noble`|[Dockerfile](./generated/5.0.1/noble/Dockerfile)|
+|`5.0.1-trixie`, `5.0.1`|[Dockerfile](./generated/5.0.1/trixie/Dockerfile)|
+|`5.0.0-bookworm`|[Dockerfile](./generated/5.0.0/bookworm/Dockerfile)|
+|`5.0.0-bullseye`|[Dockerfile](./generated/5.0.0/bullseye/Dockerfile)|
+|`5.0.0-jammy`|[Dockerfile](./generated/5.0.0/jammy/Dockerfile)|
+|`5.0.0-noble`|[Dockerfile](./generated/5.0.0/noble/Dockerfile)|
+|`5.0.0-trixie`, `5.0.0`|[Dockerfile](./generated/5.0.0/trixie/Dockerfile)|
+|`4.0.7-bookworm`, `4-bookworm`|[Dockerfile](./generated/4.0.7/bookworm/Dockerfile)|
+|`4.0.7-bullseye`, `4-bullseye`|[Dockerfile](./generated/4.0.7/bullseye/Dockerfile)|
+|`4.0.7-jammy`, `4-jammy`|[Dockerfile](./generated/4.0.7/jammy/Dockerfile)|
+|`4.0.7-noble`, `4-noble`|[Dockerfile](./generated/4.0.7/noble/Dockerfile)|
+|`4.0.7-trixie`, `4-trixie`, `4.0.7`, `4`|[Dockerfile](./generated/4.0.7/trixie/Dockerfile)|
+|`4.0.6-bookworm`|[Dockerfile](./generated/4.0.6/bookworm/Dockerfile)|
+|`4.0.6-bullseye`|[Dockerfile](./generated/4.0.6/bullseye/Dockerfile)|
+|`4.0.6-jammy`|[Dockerfile](./generated/4.0.6/jammy/Dockerfile)|
+|`4.0.6-noble`|[Dockerfile](./generated/4.0.6/noble/Dockerfile)|
+|`4.0.6-trixie`, `4.0.6`|[Dockerfile](./generated/4.0.6/trixie/Dockerfile)|
+|`4.0.5-bookworm`|[Dockerfile](./generated/4.0.5/bookworm/Dockerfile)|
+|`4.0.5-bullseye`|[Dockerfile](./generated/4.0.5/bullseye/Dockerfile)|
+|`4.0.5-jammy`|[Dockerfile](./generated/4.0.5/jammy/Dockerfile)|
+|`4.0.5-noble`|[Dockerfile](./generated/4.0.5/noble/Dockerfile)|
+|`4.0.5-trixie`, `4.0.5`|[Dockerfile](./generated/4.0.5/trixie/Dockerfile)|
+|`4.0.4-bookworm`|[Dockerfile](./generated/4.0.4/bookworm/Dockerfile)|
+|`4.0.4-bullseye`|[Dockerfile](./generated/4.0.4/bullseye/Dockerfile)|
+|`4.0.4-jammy`|[Dockerfile](./generated/4.0.4/jammy/Dockerfile)|
+|`4.0.4-noble`|[Dockerfile](./generated/4.0.4/noble/Dockerfile)|
+|`4.0.4-trixie`, `4.0.4`|[Dockerfile](./generated/4.0.4/trixie/Dockerfile)|
+|`4.0.3-bookworm`|[Dockerfile](./generated/4.0.3/bookworm/Dockerfile)|
+|`4.0.3-bullseye`|[Dockerfile](./generated/4.0.3/bullseye/Dockerfile)|
+|`4.0.3-jammy`|[Dockerfile](./generated/4.0.3/jammy/Dockerfile)|
+|`4.0.3-noble`|[Dockerfile](./generated/4.0.3/noble/Dockerfile)|
+|`4.0.3-trixie`, `4.0.3`|[Dockerfile](./generated/4.0.3/trixie/Dockerfile)|
+|`4.0.2-bookworm`|[Dockerfile](./generated/4.0.2/bookworm/Dockerfile)|
+|`4.0.2-bullseye`|[Dockerfile](./generated/4.0.2/bullseye/Dockerfile)|
+|`4.0.2-jammy`|[Dockerfile](./generated/4.0.2/jammy/Dockerfile)|
+|`4.0.2-noble`|[Dockerfile](./generated/4.0.2/noble/Dockerfile)|
+|`4.0.2-trixie`, `4.0.2`|[Dockerfile](./generated/4.0.2/trixie/Dockerfile)|
+|`4.0.1-bookworm`|[Dockerfile](./generated/4.0.1/bookworm/Dockerfile)|
+|`4.0.1-bullseye`|[Dockerfile](./generated/4.0.1/bullseye/Dockerfile)|
+|`4.0.1-jammy`|[Dockerfile](./generated/4.0.1/jammy/Dockerfile)|
+|`4.0.1-noble`|[Dockerfile](./generated/4.0.1/noble/Dockerfile)|
+|`4.0.1-trixie`, `4.0.1`|[Dockerfile](./generated/4.0.1/trixie/Dockerfile)|
+|`4.0.0-bookworm`|[Dockerfile](./generated/4.0.0/bookworm/Dockerfile)|
+|`4.0.0-bullseye`|[Dockerfile](./generated/4.0.0/bullseye/Dockerfile)|
+|`4.0.0-jammy`|[Dockerfile](./generated/4.0.0/jammy/Dockerfile)|
+|`4.0.0-noble`|[Dockerfile](./generated/4.0.0/noble/Dockerfile)|
+|`4.0.0-trixie`, `4.0.0`|[Dockerfile](./generated/4.0.0/trixie/Dockerfile)|
+|`3.0.14-bookworm`, `3-bookworm`|[Dockerfile](./generated/3.0.14/bookworm/Dockerfile)|
+|`3.0.14-bullseye`, `3-bullseye`|[Dockerfile](./generated/3.0.14/bullseye/Dockerfile)|
+|`3.0.14-jammy`, `3-jammy`|[Dockerfile](./generated/3.0.14/jammy/Dockerfile)|
+|`3.0.14-noble`, `3-noble`|[Dockerfile](./generated/3.0.14/noble/Dockerfile)|
+|`3.0.14-trixie`, `3-trixie`, `3.0.14`, `3`|[Dockerfile](./generated/3.0.14/trixie/Dockerfile)|
+|`3.0.13-bookworm`|[Dockerfile](./generated/3.0.13/bookworm/Dockerfile)|
+|`3.0.13-bullseye`|[Dockerfile](./generated/3.0.13/bullseye/Dockerfile)|
+|`3.0.13-jammy`|[Dockerfile](./generated/3.0.13/jammy/Dockerfile)|
+|`3.0.13-noble`|[Dockerfile](./generated/3.0.13/noble/Dockerfile)|
+|`3.0.13-trixie`, `3.0.13`|[Dockerfile](./generated/3.0.13/trixie/Dockerfile)|
+|`3.0.12-bookworm`|[Dockerfile](./generated/3.0.12/bookworm/Dockerfile)|
+|`3.0.12-bullseye`|[Dockerfile](./generated/3.0.12/bullseye/Dockerfile)|
+|`3.0.12-jammy`|[Dockerfile](./generated/3.0.12/jammy/Dockerfile)|
+|`3.0.12-noble`|[Dockerfile](./generated/3.0.12/noble/Dockerfile)|
+|`3.0.12-trixie`, `3.0.12`|[Dockerfile](./generated/3.0.12/trixie/Dockerfile)|
+|`3.0.11-bookworm`|[Dockerfile](./generated/3.0.11/bookworm/Dockerfile)|
+|`3.0.11-bullseye`|[Dockerfile](./generated/3.0.11/bullseye/Dockerfile)|
+|`3.0.11-jammy`|[Dockerfile](./generated/3.0.11/jammy/Dockerfile)|
+|`3.0.11-noble`|[Dockerfile](./generated/3.0.11/noble/Dockerfile)|
+|`3.0.11-trixie`, `3.0.11`|[Dockerfile](./generated/3.0.11/trixie/Dockerfile)|
+|`3.0.10-bookworm`|[Dockerfile](./generated/3.0.10/bookworm/Dockerfile)|
+|`3.0.10-bullseye`|[Dockerfile](./generated/3.0.10/bullseye/Dockerfile)|
+|`3.0.10-jammy`|[Dockerfile](./generated/3.0.10/jammy/Dockerfile)|
+|`3.0.10-noble`|[Dockerfile](./generated/3.0.10/noble/Dockerfile)|
+|`3.0.10-trixie`, `3.0.10`|[Dockerfile](./generated/3.0.10/trixie/Dockerfile)|
+|`3.0.9-bookworm`|[Dockerfile](./generated/3.0.9/bookworm/Dockerfile)|
+|`3.0.9-bullseye`|[Dockerfile](./generated/3.0.9/bullseye/Dockerfile)|
+|`3.0.9-jammy`|[Dockerfile](./generated/3.0.9/jammy/Dockerfile)|
+|`3.0.9-noble`|[Dockerfile](./generated/3.0.9/noble/Dockerfile)|
+|`3.0.9-trixie`, `3.0.9`|[Dockerfile](./generated/3.0.9/trixie/Dockerfile)|
 
 
-> _Firebird 3 does not have an image for Ubuntu 24.04 LTS (Noble Numbat) due to a dependency (`libncurses5`) missing from Ubuntu sources._
+
+## Snapshot (pre-release) images
+
+Pre-release builds from the Firebird development branches are available as snapshot images:
+
+| Tag | Source Branch | Description |
+|-----|---------------|-------------|
+| `6-snapshot` | `master` | Firebird 6.x development builds |
+| `5-snapshot` | `v5.0-release` | Firebird 5.x next-patch builds |
+
+> **Warning:** Snapshot images are built from unreleased code and may be unstable. They are rebuilt daily and replaced on each build. Do not use in production.
+
+```bash
+# Pull latest Firebird 6.x development snapshot
+docker pull firebirdsql/firebird:6-snapshot
+
+# Pull latest Firebird 5.x patch snapshot
+docker pull firebirdsql/firebird:5-snapshot
+```
+
+
+## Architectures
+
+Images for Firebird 5.x and later are available for both `linux/amd64` and `linux/arm64`. Firebird 3.x and 4.x images are `linux/amd64` only.
 
 
 
@@ -155,6 +211,8 @@ Creates an user in Firebird security database.
 
 You must inform a password in `FIREBIRD_PASSWORD` variable. Otherwise the container initialization will fail.
 
+If the username is not a regular SQL identifier (e.g. it contains dots or dashes, like `dba.backend`) it will be created as a [delimited identifier](https://firebirdsql.org/file/documentation/chunk/en/refdocs/fblangref50/fblangref50-structure.html#fblangref50-structure-identifiers), which is case-sensitive in Firebird. Clients must then connect quoting the username in double quotes, e.g. `isql -u '"dba.backend"'`.
+
 
 
 ### `FIREBIRD_DATABASE`
@@ -197,7 +255,29 @@ Note that both the original variable and its `_FILE` variant are mutually exclus
 
 To use database aliases, create your own `databases.conf` file and configure a [Docker bind mount](https://docs.docker.com/engine/storage/bind-mounts/) for it at `/opt/firebird/databases.conf`.
 
-More information: 
+> **IMPORTANT:** A bind mount _replaces_ the entire file inside the container. The default `databases.conf` shipped with the image contains a required entry for the security database (`security.db`). If your file does not include this entry, Firebird cannot open the security database and the container will fail to start with an error like:
+>
+> ```
+> I/O error during "open" operation for file "security.db"
+> ```
+
+To keep the required entries, start from the default file of the image and append your aliases to it:
+
+```bash
+# Extract the default databases.conf from the image
+docker run --rm firebirdsql/firebird cat /opt/firebird/databases.conf > databases.conf
+
+# Append your aliases
+echo "mydb = /var/lib/firebird/data/mydb.fdb" >> databases.conf
+
+# Use it with a bind mount
+docker run -d --mount type=bind,src=$(pwd)/databases.conf,dst=/opt/firebird/databases.conf \
+    -e FIREBIRD_ROOT_PASSWORD=my_secret_password firebirdsql/firebird
+```
+
+Extracting the file from the same image (and tag) you run also ensures you get the correct security database entry, which is different for each Firebird version.
+
+More information:
 - [Firebird Quick Start Guide](https://www.firebirdsql.org/file/documentation/html/en/firebirddocs/qsg3/firebird-3-quickstartguide.html#qsg3-config-security) (section "Use database aliases")
 
 
@@ -301,121 +381,4 @@ More information:
 - [Firebird’s gbak Backup and Restore Utility](https://firebirdsql.org/file/documentation/html/en/firebirddocs/gbak/firebird-gbak.html) from Norman Dunbar and Mark Rotteveel.
 - [Quick Guide for Gbak Backup-Restore](https://ib-aid.com/articles/firebird-gbak-backup-tips-and-tricks) from IBSurgeon.
 
-
-
-# Development notes
-
-## Prerequisites
-
-  - [Docker](https://docs.docker.com/engine/install/)
-  - [Powershell 7.5+](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-linux)
-  - [Invoke-Build](https://github.com/nightroman/Invoke-Build#install-as-module)
-
-
-
-## Building
-
-To generate the source files and build each image from [`assets.json`](assets.json) configuration file, run:
-
-```bash
-Invoke-Build
-```
-
-You can then check all created images with:
-
-```bash
-docker image ls firebirdsql/firebird
-```
-
-### Filtering builds
-
-> You can filter builds by **version** or **distribution**:
-
-```bash
-# Build only Firebird 5.x images
-Invoke-Build Build -VersionFilter "5"
-
-# Build only specific version
-Invoke-Build Build -VersionFilter "5.0.2"
-
-# Build only bookworm distribution images
-Invoke-Build Build -DistributionFilter "bookworm"
-
-# Combine filters
-Invoke-Build Build -VersionFilter "4" -DistributionFilter "jammy"
-```
-
-
-
-## Testing
-
-To run the test suite for each image, use:
-
-```bash
-Invoke-Build Test
-```
-
-### Filtering tests
-
-You can filter tests by **version**, **distribution**, or a specific **test name**:
-
-```bash
-# Test only Firebird 4.x images
-Invoke-Build Test -VersionFilter "4"
-
-# Test only bullseye distribution images
-Invoke-Build Test -DistributionFilter "bullseye"
-
-# Run specific test
-Invoke-Build Test -TestFilter "FIREBIRD_USER_can_create_user"
-
-# Combine filters
-Invoke-Build Test -VersionFilter "5" -DistributionFilter "noble"
-```
-
-
-
-## Maintenance tasks
-
-The build script includes additional tasks dedicated to maintaining this project.
-
-```bash
-# Update assets.json from GitHub releases
-Invoke-Build Update-Assets
-
-# Update README.md from assets.json
-Invoke-Build Update-Readme
-
-# Regenerate source files
-Invoke-Build Prepare
-
-# Clean up generated files
-Invoke-Build Clean
-```
-
-
-
-## Following a new Firebird release
-
-Once a new Firebird release is published, follow these steps to update all relevant files in this repository:
-
-```bash
-# Update assets.json from GitHub releases
-Invoke-Build Update-Assets
-
-# Update README.md from assets.json
-Invoke-Build Update-Readme
-
-# Regenerate source files
-Invoke-Build Prepare
-
-# Adds all untracked files
-git add -u
-
-# Remove logs from staging area
-git reset -- generated/logs/
-
-# Commit
-git commit -M "Adds Firebird ..."
-```
 

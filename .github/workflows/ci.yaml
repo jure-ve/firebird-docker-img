@@ -3,6 +3,9 @@ name: ci
 # Build and run all tests.
 # - Triggers: All pushes and pull requests on any branch.
 # - Runs on: All repositories (including forks)
+#
+# Forks (non-dispatch): build only the latest release per major Firebird version.
+# Official repo or workflow_dispatch: full build of all versions.
 
 on:
   push:
@@ -11,46 +14,85 @@ on:
   pull_request:
     branches: ['**']
 
-  workflow_dispatch:  # Allows manual dispatch
+  workflow_dispatch:
+    inputs:
+      version-filter:
+        description: 'Version filter (e.g. 5, 4.0, 5.0.3). Empty = all.'
+        required: false
+        type: string
+      distro-filter:
+        description: 'Distro filter (e.g. trixie). Empty = all.'
+        required: false
+        type: string
 
 # Prevents overlapping runs of this workflow on the same branch.
-#   If multiple commits are pushed in quick succession, only the most recent run will complete.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  determine-scope:
+    runs-on: ubuntu-latest
+    outputs:
+      latest-per-major: ${{ steps.scope.outputs.latest-per-major }}
+    steps:
+      - name: Determine build scope
+        id: scope
+        run: |
+          IS_OFFICIAL="${{ github.repository == 'FirebirdSQL/firebird-docker' }}"
+          IS_DISPATCH="${{ github.event_name == 'workflow_dispatch' }}"
+          if [[ "$IS_OFFICIAL" == "true" || "$IS_DISPATCH" == "true" ]]; then
+            echo "latest-per-major=false" >> $GITHUB_OUTPUT
+          else
+            echo "latest-per-major=true" >> $GITHUB_OUTPUT
+          fi
+
   build-and-test:
     if: ${{ !(github.repository == 'FirebirdSQL/firebird-docker' && github.ref == 'refs/heads/master') }}
-    runs-on: ubuntu-latest
+    needs: determine-scope
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 10
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: actions/checkout@v6
 
       - name: Install tools
         shell: pwsh
         run: |
           Install-Module InvokeBuild -Force
+          Install-Module PSFirebird -MinimumVersion '1.0.0' -Force
 
       - name: Build
         shell: pwsh
         run: |
-          Invoke-Build
+          $params = @{}
+          if ('${{ inputs.version-filter }}') { $params['VersionFilter'] = '${{ inputs.version-filter }}' }
+          if ('${{ inputs.distro-filter }}') { $params['DistributionFilter'] = '${{ inputs.distro-filter }}' }
+          if ('${{ needs.determine-scope.outputs.latest-per-major }}' -eq 'true') { $params['LatestPerMajor'] = $true }
+          Invoke-Build Build @params
 
       - name: Test
         shell: pwsh
         run: |
-          Invoke-Build Test
+          $params = @{}
+          if ('${{ inputs.version-filter }}') { $params['VersionFilter'] = '${{ inputs.version-filter }}' }
+          if ('${{ inputs.distro-filter }}') { $params['DistributionFilter'] = '${{ inputs.distro-filter }}' }
+          if ('${{ needs.determine-scope.outputs.latest-per-major }}' -eq 'true') { $params['LatestPerMajor'] = $true }
+          Invoke-Build Test @params
 
-      - name: Upload logs
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: ci-logs-${{ github.run_id }}
-          path: generated/logs
-          retention-days: 7  # Short log retention for CI runs
+      - name: Run tag unit tests
+        # Verifies Get-ImageTags produces correct Docker tags (pure logic, no Docker required).
+        # Tag logic is arch-independent — run once on amd64 to avoid duplication.
+        if: matrix.arch == 'amd64'
+        shell: pwsh
+        run: |
+          Install-Module Pester -Force -SkipPublisherCheck
+          Invoke-Pester src/tags.tests.ps1 -Output Detailed -CI

@@ -14,11 +14,34 @@ Docker images for Firebird Database.
 
 # Supported tags
 
-|`firebirdsql/firebird`|Dockerfile|
+|`{{IMAGE_FULL_NAME}}`|Dockerfile|
 |:-|:-:|
-<%$TSupportedTags%>
+{{SupportedTags}}
 
-> _Firebird 3 does not have an image for Ubuntu 24.04 LTS (Noble Numbat) due to a dependency (`libncurses5`) missing from Ubuntu sources._
+
+## Snapshot (pre-release) images
+
+Pre-release builds from the Firebird development branches are available as snapshot images:
+
+| Tag | Source Branch | Description |
+|-----|---------------|-------------|
+| `6-snapshot` | `master` | Firebird 6.x development builds |
+| `5-snapshot` | `v5.0-release` | Firebird 5.x next-patch builds |
+
+> **Warning:** Snapshot images are built from unreleased code and may be unstable. They are rebuilt daily and replaced on each build. Do not use in production.
+
+```bash
+# Pull latest Firebird 6.x development snapshot
+docker pull firebirdsql/firebird:6-snapshot
+
+# Pull latest Firebird 5.x patch snapshot
+docker pull firebirdsql/firebird:5-snapshot
+```
+
+
+## Architectures
+
+Images for Firebird 5.x and later are available for both `linux/amd64` and `linux/arm64`. Firebird 3.x and 4.x images are `linux/amd64` only.
 
 
 
@@ -90,6 +113,8 @@ Creates an user in Firebird security database.
 
 You must inform a password in `FIREBIRD_PASSWORD` variable. Otherwise the container initialization will fail.
 
+If the username is not a regular SQL identifier (e.g. it contains dots or dashes, like `dba.backend`) it will be created as a [delimited identifier](https://firebirdsql.org/file/documentation/chunk/en/refdocs/fblangref50/fblangref50-structure.html#fblangref50-structure-identifiers), which is case-sensitive in Firebird. Clients must then connect quoting the username in double quotes, e.g. `isql -u '"dba.backend"'`.
+
 
 
 ### `FIREBIRD_DATABASE`
@@ -132,7 +157,29 @@ Note that both the original variable and its `_FILE` variant are mutually exclus
 
 To use database aliases, create your own `databases.conf` file and configure a [Docker bind mount](https://docs.docker.com/engine/storage/bind-mounts/) for it at `/opt/firebird/databases.conf`.
 
-More information: 
+> **IMPORTANT:** A bind mount _replaces_ the entire file inside the container. The default `databases.conf` shipped with the image contains a required entry for the security database (`security.db`). If your file does not include this entry, Firebird cannot open the security database and the container will fail to start with an error like:
+>
+> ```
+> I/O error during "open" operation for file "security.db"
+> ```
+
+To keep the required entries, start from the default file of the image and append your aliases to it:
+
+```bash
+# Extract the default databases.conf from the image
+docker run --rm firebirdsql/firebird cat /opt/firebird/databases.conf > databases.conf
+
+# Append your aliases
+echo "mydb = /var/lib/firebird/data/mydb.fdb" >> databases.conf
+
+# Use it with a bind mount
+docker run -d --mount type=bind,src=$(pwd)/databases.conf,dst=/opt/firebird/databases.conf \
+    -e FIREBIRD_ROOT_PASSWORD=my_secret_password firebirdsql/firebird
+```
+
+Extracting the file from the same image (and tag) you run also ensures you get the correct security database entry, which is different for each Firebird version.
+
+More information:
 - [Firebird Quick Start Guide](https://www.firebirdsql.org/file/documentation/html/en/firebirddocs/qsg3/firebird-3-quickstartguide.html#qsg3-config-security) (section "Use database aliases")
 
 
@@ -236,120 +283,3 @@ More information:
 - [Firebird’s gbak Backup and Restore Utility](https://firebirdsql.org/file/documentation/html/en/firebirddocs/gbak/firebird-gbak.html) from Norman Dunbar and Mark Rotteveel.
 - [Quick Guide for Gbak Backup-Restore](https://ib-aid.com/articles/firebird-gbak-backup-tips-and-tricks) from IBSurgeon.
 
-
-
-# Development notes
-
-## Prerequisites
-
-  - [Docker](https://docs.docker.com/engine/install/)
-  - [Powershell 7.5+](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-linux)
-  - [Invoke-Build](https://github.com/nightroman/Invoke-Build#install-as-module)
-
-
-
-## Building
-
-To generate the source files and build each image from [`assets.json`](assets.json) configuration file, run:
-
-```bash
-Invoke-Build
-```
-
-You can then check all created images with:
-
-```bash
-docker image ls firebirdsql/firebird
-```
-
-### Filtering builds
-
-> You can filter builds by **version** or **distribution**:
-
-```bash
-# Build only Firebird 5.x images
-Invoke-Build Build -VersionFilter "5"
-
-# Build only specific version
-Invoke-Build Build -VersionFilter "5.0.2"
-
-# Build only bookworm distribution images
-Invoke-Build Build -DistributionFilter "bookworm"
-
-# Combine filters
-Invoke-Build Build -VersionFilter "4" -DistributionFilter "jammy"
-```
-
-
-
-## Testing
-
-To run the test suite for each image, use:
-
-```bash
-Invoke-Build Test
-```
-
-### Filtering tests
-
-You can filter tests by **version**, **distribution**, or a specific **test name**:
-
-```bash
-# Test only Firebird 4.x images
-Invoke-Build Test -VersionFilter "4"
-
-# Test only bullseye distribution images
-Invoke-Build Test -DistributionFilter "bullseye"
-
-# Run specific test
-Invoke-Build Test -TestFilter "FIREBIRD_USER_can_create_user"
-
-# Combine filters
-Invoke-Build Test -VersionFilter "5" -DistributionFilter "noble"
-```
-
-
-
-## Maintenance tasks
-
-The build script includes additional tasks dedicated to maintaining this project.
-
-```bash
-# Update assets.json from GitHub releases
-Invoke-Build Update-Assets
-
-# Update README.md from assets.json
-Invoke-Build Update-Readme
-
-# Regenerate source files
-Invoke-Build Prepare
-
-# Clean up generated files
-Invoke-Build Clean
-```
-
-
-
-## Following a new Firebird release
-
-Once a new Firebird release is published, follow these steps to update all relevant files in this repository:
-
-```bash
-# Update assets.json from GitHub releases
-Invoke-Build Update-Assets
-
-# Update README.md from assets.json
-Invoke-Build Update-Readme
-
-# Regenerate source files
-Invoke-Build Prepare
-
-# Adds all untracked files
-git add -u
-
-# Remove logs from staging area
-git reset -- generated/logs/
-
-# Commit
-git commit -M "Adds Firebird ..."
-```

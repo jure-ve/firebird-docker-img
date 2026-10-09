@@ -1,0 +1,123 @@
+name: snapshot
+
+# Build and publish snapshot (pre-release) Docker images.
+# - Triggers: Scheduled daily and manual dispatch.
+# - Runs on: Only the official repository (FirebirdSQL/firebird-docker)
+#
+# Snapshot images use tags like '6-snapshot', '5-snapshot', '4-snapshot'
+# from the FirebirdSQL/snapshots GitHub repository.
+#
+# Multi-arch: each arch builds and pushes by digest, then a final job
+# assembles a multi-arch manifest via `docker buildx imagetools create`.
+
+on:
+  schedule:
+    - cron: "0 6 * * *"  # Daily at 06:00 UTC
+
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Snapshot branch to build'
+        required: true
+        type: choice
+        options:
+          - master
+          - v5.0-release
+          - v4.0
+        default: master
+
+# Only a single instance of this workflow can be in execution at a given time.
+concurrency:
+  group: ${{ github.workflow }}
+
+jobs:
+  build-snapshot:
+    if: ${{ github.repository == 'FirebirdSQL/firebird-docker' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: ${{ github.event_name == 'workflow_dispatch' && fromJSON(format('["{0}"]', inputs.branch)) || fromJSON('["master", "v5.0-release"]') }}
+        arch: [amd64, arm64]
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+        # Firebird 4.x has no linux-arm64 snapshot tarball (FirebirdSQL/snapshots
+        # ships Android arm64 only). Mirrors the FB3/FB4 amd64-only stable rule.
+        exclude:
+          - branch: v4.0
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Install tools
+        shell: pwsh
+        run: |
+          Install-Module InvokeBuild -Force
+          Install-Module PSFirebird -MinimumVersion '1.0.0' -Force
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push snapshot (by digest)
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          Invoke-Build Build-Snapshot -Branch '${{ matrix.branch }}'
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v7
+        with:
+          name: digests-snapshot-${{ matrix.branch }}-${{ matrix.arch }}
+          path: generated/digests-snapshot-*.json
+          if-no-files-found: error
+          retention-days: 1
+
+  create-manifests:
+    if: ${{ github.repository == 'FirebirdSQL/firebird-docker' }}
+    needs: build-snapshot
+    strategy:
+      fail-fast: false
+      matrix:
+        branch: ${{ github.event_name == 'workflow_dispatch' && fromJSON(format('["{0}"]', inputs.branch)) || fromJSON('["master", "v5.0-release"]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download digests
+        uses: actions/download-artifact@v8
+        with:
+          path: generated
+          pattern: digests-snapshot-${{ matrix.branch }}-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Install tools
+        shell: pwsh
+        run: |
+          Install-Module InvokeBuild -Force
+          Install-Module PSFirebird -MinimumVersion '1.0.0' -Force
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Assemble multi-arch manifest
+        shell: pwsh
+        run: |
+          Invoke-Build Publish-Snapshot-Manifests -Branch '${{ matrix.branch }}'

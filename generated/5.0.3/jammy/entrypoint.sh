@@ -36,7 +36,7 @@ read_from_file_or_env() {
 			-----
 			ERROR: Both $var and $fileVar are set.
 			
-			       Variables %s and %s are mutually exclusive. Remove either one.
+			       Variables $var and $fileVar are mutually exclusive. Remove either one.
 			-----
 		EOL
         exit 1
@@ -52,6 +52,43 @@ read_from_file_or_env() {
 
     export "$var"="$val"
     unset "$fileVar"
+}
+
+# usage: escape_sql_string STR
+#    ie: escape_sql_string "it's_me"
+# Escapes single quotes for safe SQL interpolation.
+escape_sql_string() {
+    printf '%s' "${1//\'/\'\'}"
+}
+
+# usage: quote_sql_identifier NAME
+#    ie: quote_sql_identifier 'dba.backend'
+# Quotes NAME as a SQL identifier when needed.
+#   Regular identifiers are returned unchanged (Firebird treats them as case-insensitive).
+#   Values already wrapped in double quotes are returned verbatim.
+#   Anything else is returned as a delimited (double-quoted, case-sensitive) identifier.
+quote_sql_identifier() {
+    local value="$1"
+    local regular_identifier='^[A-Za-z][A-Za-z0-9_$]*$'
+    if [[ "$value" =~ $regular_identifier ]]; then
+        printf '%s' "$value"
+    elif [ "${#value}" -ge 2 ] && [ "${value:0:1}" = '"' ] && [ "${value: -1}" = '"' ]; then
+        printf '%s' "$value"
+    else
+        printf '"%s"' "${value//\"/\"\"}"
+    fi
+}
+
+# usage: unquote_sql_identifier NAME
+#    ie: unquote_sql_identifier '"dba.backend"'
+# Removes the double quotes of a delimited identifier. Other values are returned unchanged.
+unquote_sql_identifier() {
+    local value="$1"
+    if [ "${#value}" -ge 2 ] && [ "${value:0:1}" = '"' ] && [ "${value: -1}" = '"' ]; then
+        value="${value:1:-1}"
+        value="${value//\"\"/\"}"
+    fi
+    printf '%s' "$value"
 }
 
 # usage: firebird_config_set KEY VALUE
@@ -97,7 +134,8 @@ set_config() {
     done
 
     # Output changed settings
-    local changed_settings=$(grep -o '^[^#]*' /opt/firebird/firebird.conf)
+    local changed_settings
+    changed_settings=$(grep -o '^[^#]*' /opt/firebird/firebird.conf) || true
     if [ -n "$changed_settings" ]; then
         echo "Using settings:"
         echo "$changed_settings" | indent
@@ -110,10 +148,13 @@ set_sysdba() {
     if [ -n "$FIREBIRD_ROOT_PASSWORD" ]; then
         echo 'Changing SYSDBA password.'
 
+        local escaped_password
+        escaped_password=$(escape_sql_string "$FIREBIRD_ROOT_PASSWORD")
+
         # [Tabs ahead]
         /opt/firebird/bin/isql -b -user SYSDBA security.db <<-EOL
 			CREATE OR ALTER USER SYSDBA
-			    PASSWORD '$FIREBIRD_ROOT_PASSWORD'
+			    PASSWORD '${escaped_password}'
 			    USING PLUGIN Srp;
 			EXIT;
 		EOL
@@ -122,7 +163,7 @@ set_sysdba() {
             # [Tabs ahead]
             /opt/firebird/bin/isql -b -user SYSDBA security.db <<-EOL
 				CREATE OR ALTER USER SYSDBA
-				    PASSWORD '$FIREBIRD_ROOT_PASSWORD'
+				    PASSWORD '${escaped_password}'
 				    USING PLUGIN Legacy_UserManager;
 				EXIT;
 			EOL
@@ -156,10 +197,15 @@ create_user() {
         requires_user_password
         echo "Creating user '$FIREBIRD_USER'..."
 
+        local quoted_user
+        quoted_user=$(quote_sql_identifier "$FIREBIRD_USER")
+        local escaped_password
+        escaped_password=$(escape_sql_string "$FIREBIRD_PASSWORD")
+
         # [Tabs ahead]
         /opt/firebird/bin/isql -b security.db <<-EOL
-			CREATE OR ALTER USER $FIREBIRD_USER
-			    PASSWORD '$FIREBIRD_PASSWORD'
+			CREATE OR ALTER USER ${quoted_user}
+			    PASSWORD '${escaped_password}'
 			    GRANT ADMIN ROLE;
 			EXIT;
 		EOL
@@ -171,18 +217,26 @@ process_sql() {
 	local isql_command=( /opt/firebird/bin/isql -b )
 
     if [ -n "$FIREBIRD_USER" ]; then
-        isql_command+=( -u "$FIREBIRD_USER" -p "$FIREBIRD_PASSWORD" )
+        # Pass the effective (unquoted) username: this local (embedded) connection skips
+        #   authentication, and the server then normalizes the name exactly like it
+        #   normalized the database owner name, so DDL permissions work in init scripts.
+        isql_command+=( -u "$(unquote_sql_identifier "$(quote_sql_identifier "$FIREBIRD_USER")")" -p "$FIREBIRD_PASSWORD" )
 	fi
 
 	if [ -n "$FIREBIRD_DATABASE" ]; then
 		isql_command+=( "$FIREBIRD_DATABASE" )
 	fi
 
-    ${isql_command[@]} "$@"
+    "${isql_command[@]}" "$@"
 }
 
 # Execute database initialization scripts
 init_db() {
+    # Guard against empty glob (no files match)
+    if ! compgen -G "$1" > /dev/null 2>&1; then
+        return
+    fi
+
     local f
     for f; do
         case "$f" in
@@ -205,7 +259,6 @@ init_db() {
         esac
         printf '\n'
     done
-
 }
 
 # Create user database.
@@ -216,8 +269,8 @@ create_db() {
         cd "$FIREBIRD_DATA"
         export FIREBIRD_DATABASE=$(realpath --canonicalize-missing "$FIREBIRD_DATABASE")
 
-        # Store it for other sessions of this instance
-        echo "export FIREBIRD_DATABASE='$FIREBIRD_DATABASE'" > ~/.bashrc
+        # Store it for other sessions of this instance (append, do not overwrite)
+        echo "export FIREBIRD_DATABASE='$FIREBIRD_DATABASE'" >> /opt/firebird/.firebird_env
 
         # Create database only if not exists.
         if [ ! -f "$FIREBIRD_DATABASE" ]; then
@@ -226,8 +279,21 @@ create_db() {
             read_from_file_or_env 'FIREBIRD_DATABASE_PAGE_SIZE'
             read_from_file_or_env 'FIREBIRD_DATABASE_DEFAULT_CHARSET'
 
+            local escaped_database
+            escaped_database=$(escape_sql_string "$FIREBIRD_DATABASE")
+
             local user_and_password=''
-            [ -n "$FIREBIRD_USER" ] && user_and_password=" USER '$FIREBIRD_USER' PASSWORD '$FIREBIRD_PASSWORD'"
+            if [ -n "$FIREBIRD_USER" ]; then
+                # The USER clause value is used as the database owner name and is not
+                #   parsed as an identifier. Pass the effective (unquoted) username.
+                local owner_name
+                owner_name=$(unquote_sql_identifier "$(quote_sql_identifier "$FIREBIRD_USER")")
+                local escaped_user
+                escaped_user=$(escape_sql_string "$owner_name")
+                local escaped_password
+                escaped_password=$(escape_sql_string "$FIREBIRD_PASSWORD")
+                user_and_password=" USER '${escaped_user}' PASSWORD '${escaped_password}'"
+            fi
 
             local page_size=''
             [ -n "$FIREBIRD_DATABASE_PAGE_SIZE" ] && page_size="PAGE_SIZE $FIREBIRD_DATABASE_PAGE_SIZE"
@@ -237,7 +303,7 @@ create_db() {
 
             # [Tabs ahead]
             /opt/firebird/bin/isql -b -q <<-EOL
-			CREATE DATABASE '$FIREBIRD_DATABASE'
+			CREATE DATABASE '${escaped_database}'
 			    $user_and_password
 			    $page_size
 			    $default_charset;

@@ -10,16 +10,6 @@ FROM ubuntu:noble
 ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
 
-ARG ARCH_ARM64
-
-# ARM64 arch
-ENV FIREBIRD_RELEASE_URL=${ARCH_ARM64:+}
-ENV FIREBIRD_RELEASE_SHA256=${ARCH_ARM64:+}
-
-# AMD64 arch
-ENV FIREBIRD_RELEASE_URL=${FIREBIRD_RELEASE_URL:-https://github.com/FirebirdSQL/firebird/releases/download/v4.0.4/Firebird-4.0.4.3010-0.amd64.tar.gz}
-ENV FIREBIRD_RELEASE_SHA256=${FIREBIRD_RELEASE_SHA256:-ef589301c5e13a1f8481e1e38c453641ef5082344bf69edb51f8aa9f036bcaca}
-
 ENV FIREBIRD_VERSION=4.0.4
 ENV FIREBIRD_MAJOR=4
 
@@ -29,27 +19,36 @@ ENV FIREBIRD_MAJOR=4
 #   -x  Print commands and their arguments as they are executed.
 
 # Prerequisites
-#   FB 3.0 uses libncurses5: https://github.com/FirebirdSQL/firebird/issues/6418#issuecomment-826245785
 RUN set -eux; \
     apt-get update; \
-    # Install prerequisites + curl, ca-certificates for download
+    # Install prerequisites + tini + curl/ca-certificates for download
     apt-get install -y --no-install-recommends \
         libatomic1 \
         libicu74 \
-        $([ $FIREBIRD_MAJOR -eq 3 ] && echo 'libncurses5' || echo 'libncurses6') \
+        libncurses6 \
         libtomcrypt1 \
         libtommath1 \
         netbase \
         procps \
+        tini \
+        tzdata \
         ca-certificates \
         curl; \
     \
     # Download
+    ARCH=$(dpkg --print-architecture); \
+    case "$ARCH" in \
+        amd64) \
+            FIREBIRD_URL='https://github.com/FirebirdSQL/firebird/releases/download/v4.0.4/Firebird-4.0.4.3010-0.amd64.tar.gz'; \
+            FIREBIRD_SHA256='ef589301c5e13a1f8481e1e38c453641ef5082344bf69edb51f8aa9f036bcaca'; \
+            ;; \
+        *) echo "Unsupported architecture: $ARCH" >&2; exit 1 ;; \
+    esac; \
     mkdir -p /tmp/firebird_install; \
-    echo "Downloading Firebird from $FIREBIRD_RELEASE_URL"; \
-    curl -fSL "$FIREBIRD_RELEASE_URL" -o /tmp/firebird_install/firebird-bundle.tar.gz; \
-    echo "Verifying checksum: $FIREBIRD_RELEASE_SHA256 for downloaded file"; \
-    echo "$FIREBIRD_RELEASE_SHA256 /tmp/firebird_install/firebird-bundle.tar.gz" | sha256sum -c -; \
+    echo "Downloading Firebird from $FIREBIRD_URL"; \
+    curl -fSL "$FIREBIRD_URL" -o /tmp/firebird_install/firebird-bundle.tar.gz; \
+    echo "Verifying checksum: $FIREBIRD_SHA256 for downloaded file"; \
+    echo "$FIREBIRD_SHA256 /tmp/firebird_install/firebird-bundle.tar.gz" | sha256sum -c -; \
     \
     # Extract, install, clean
     cd /tmp/firebird_install; \
@@ -70,7 +69,52 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/*
 
 # Fix libtommath for FB 3.0 -- https://github.com/FirebirdSQL/firebird/issues/5716#issuecomment-826239174
-RUN [ $FIREBIRD_MAJOR -eq 3 ] && ln -sf /usr/lib/x86_64-linux-gnu/libtommath.so.1 /usr/lib/x86_64-linux-gnu/libtommath.so.0 || true
+RUN set -eux; \
+    ARCH=$(dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null || echo "$(uname -m)-linux-gnu"); \
+    [ $FIREBIRD_MAJOR -eq 3 ] && ln -sf /usr/lib/$ARCH/libtommath.so.1 /usr/lib/$ARCH/libtommath.so.0 || true
+
+# FB 3.0 needs libncurses5/libtinfo5. On Debian Trixie and Ubuntu Noble those
+# packages were dropped from apt; pull them from the previous release pool.
+# See DECISIONS.md D-017 and https://github.com/FirebirdSQL/firebird-docker/issues/42
+RUN set -eux; \
+    if [ "$FIREBIRD_MAJOR" = "3" ]; then \
+        . /etc/os-release; \
+        case "$ID-$VERSION_CODENAME" in \
+            debian-bookworm|debian-bullseye|ubuntu-jammy) \
+                apt-get update; \
+                apt-get install -y --no-install-recommends libtinfo5 libncurses5; \
+                rm -rf /var/lib/apt/lists/* \
+                ;; \
+            debian-trixie) \
+                apt-get update; \
+                apt-get install -y --no-install-recommends ca-certificates curl; \
+                cd /tmp; \
+                curl -fSL -O http://deb.debian.org/debian/pool/main/n/ncurses/libtinfo5_6.4-4_amd64.deb; \
+                curl -fSL -O http://deb.debian.org/debian/pool/main/n/ncurses/libncurses5_6.4-4_amd64.deb; \
+                dpkg -i libtinfo5_6.4-4_amd64.deb libncurses5_6.4-4_amd64.deb; \
+                rm -f libtinfo5_6.4-4_amd64.deb libncurses5_6.4-4_amd64.deb; \
+                apt-get purge -y --auto-remove curl ca-certificates; \
+                apt-get clean; \
+                rm -rf /var/lib/apt/lists/* \
+                ;; \
+            ubuntu-noble) \
+                apt-get update; \
+                apt-get install -y --no-install-recommends ca-certificates curl; \
+                cd /tmp; \
+                curl -fSL -O http://archive.ubuntu.com/ubuntu/pool/universe/n/ncurses/libtinfo5_6.3-2ubuntu0.2_amd64.deb; \
+                curl -fSL -O http://archive.ubuntu.com/ubuntu/pool/universe/n/ncurses/libncurses5_6.3-2ubuntu0.2_amd64.deb; \
+                dpkg -i libtinfo5_6.3-2ubuntu0.2_amd64.deb libncurses5_6.3-2ubuntu0.2_amd64.deb; \
+                rm -f libtinfo5_6.3-2ubuntu0.2_amd64.deb libncurses5_6.3-2ubuntu0.2_amd64.deb; \
+                apt-get purge -y --auto-remove curl ca-certificates; \
+                apt-get clean; \
+                rm -rf /var/lib/apt/lists/* \
+                ;; \
+            *) \
+                echo "FB3: no libncurses5 provisioning path for $ID-$VERSION_CODENAME" >&2; \
+                exit 1 \
+                ;; \
+        esac; \
+    fi
 
 # System path
 ENV PATH=/opt/firebird/bin:$PATH
@@ -80,15 +124,16 @@ ENV FIREBIRD_DATA=/var/lib/firebird/data
 RUN set -eux; \
     mkdir -p "$FIREBIRD_DATA"; \
     chown -R firebird:firebird "$FIREBIRD_DATA"; \
-    chmod 644 "$FIREBIRD_DATA"
+    chmod 755 "$FIREBIRD_DATA"
 VOLUME $FIREBIRD_DATA
 
 # Entrypoint
 COPY entrypoint.sh /usr/local/bin/
 RUN set -eux; \
     chmod +x /usr/local/bin/entrypoint.sh
-ENTRYPOINT ["entrypoint.sh"]
+ENTRYPOINT ["tini", "--", "entrypoint.sh"]
 
+STOPSIGNAL SIGTERM
 EXPOSE 3050/tcp
 
 # Fix terminfo location
